@@ -1,5 +1,4 @@
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
-from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class CustomUserManager(BaseUserManager):
@@ -14,6 +13,11 @@ class CustomUserManager(BaseUserManager):
         user.set_password(password)
         user.save(using=self._db)
         return user
+    def create_superuser(self, username, password, first_name, last_name, **kwargs):
+        user = self.create_user(username, password, first_name, last_name, **kwargs)
+        user.is_superuser = True
+        user.is_staff = True
+        user.save()
 
 
 class User(AbstractBaseUser):
@@ -23,6 +27,9 @@ class User(AbstractBaseUser):
     last_name = models.CharField(max_length=100)
     avatar = models.ImageField(null=False, blank=False, default="avatar_default.png", upload_to="user_avatars")
     projects = models.ManyToManyField("projects.Project", through="projects.ProjectUser")
+    is_staff = models.BooleanField(default=False)
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name','last_name', 'password']
     objects = CustomUserManager()
+
+
