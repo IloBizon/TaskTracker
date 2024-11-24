@@ -85,5 +85,6 @@ target/
 __pycache__/
 local_settings.py
 
+/media/user_avatars
 .env
 db.sqlite3

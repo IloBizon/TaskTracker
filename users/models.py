@@ -4,11 +4,12 @@ from django.db import models
 
 class CustomUserManager(BaseUserManager):
     use_in_migrations = True
-    def create_user(self, username, password, first_name, last_name):
+    def create_user(self, username, password, first_name, last_name, **kwargs):
         user = self.model(
             username = username,
             first_name = first_name,
-            last_name = last_name
+            last_name = last_name,
+            **kwargs
         )
         user.set_password(password)
         user.save(using=self._db)
@@ -20,6 +21,7 @@ class User(AbstractBaseUser):
     password = models.CharField(max_length=100)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+    avatar = models.ImageField(null=False, blank=False, default="avatar_default.png", upload_to="user_avatars")
     projects = models.ManyToManyField("projects.Project", through="projects.ProjectUser")
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name','last_name', 'password']
