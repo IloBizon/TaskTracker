@@ -16,7 +16,7 @@ class Project(models.Model):
 
 
 class ProjectUser(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     role = models.CharField(max_length=100)
 
