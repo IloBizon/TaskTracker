@@ -1,18 +1,20 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
-from users.serializers.common import UserSerializer
+from users.serializers.common import UserSerializer, UserLoginSerializer
 from .serializers.nested import UserPrettySerializer
 
 
 @extend_schema(tags=["Users"])
 @extend_schema_view(
     list=extend_schema(
-        summary="Получить список пользователей",
+        summary="Получить список всех пользователей",
         ),
     retrieve=extend_schema(
         summary="Получить пользователя по id"
@@ -28,8 +30,35 @@ from .serializers.nested import UserPrettySerializer
     )
 )
 class UserViewSet(ModelViewSet):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     serializer_class = UserSerializer
     queryset = User.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            return super().list(request, *args, *kwargs)
+        else:
+            return Response(exception=True, status=401, data="User is not an admin!")
+
+    def update(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            return super().update(request, *args, *kwargs)
+        else:
+            return Response(exception=True, status=401, data="User is not an admin!")
+
+    def partial_update(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            return super().partial_update(request, *args, *kwargs)
+        else:
+            return Response(exception=True, status=401, data="User is not an admin!")
+
+    def destroy(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            return super().destroy(request, *args, *kwargs)
+        else:
+            return Response(exception=True, status=401, data="User is not an admin!")
 
 
 
@@ -39,7 +68,7 @@ class UserViewSet(ModelViewSet):
         summary="Регистрация нового пользователя"
     )
 )
-class CreateUser(APIView):
+class RegisterUser(APIView):
     serializer_class = UserSerializer
     def post(self,request: Request):
 
@@ -48,12 +77,51 @@ class CreateUser(APIView):
         else:
             user = User.objects.create_user(request.data['username'], request.data['password'], request.data['first_name'], request.data['last_name'])
 
+        token = RefreshToken.for_user(user)
         serializer = UserSerializer(instance=user)
 
-        return Response(serializer.data)
+        return Response({
+        'refresh': str(token),
+        'access': str(token.access_token),
+        }
+)
 
 
+@extend_schema(tags=["Users"])
+@extend_schema_view(
+    post=extend_schema(
+        summary="Логин пользователя"
+    )
+)
+class UserLogin(APIView):
+    serializer_class=UserLoginSerializer
+    def post(self, request):
+
+        user = User.objects.get(username=request.data["username"])
+        if not user or not user.check_password(request.data["password"]):
+            return Response(exception=True, status=401, data="Username or password is incorrect")
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        })
+
+
+
+
+
+@extend_schema(tags=["Users"])
+@extend_schema_view(
+    get=extend_schema(
+        summary="Получить профиль пользователя"
+    )
+)
 class GetUserProfile(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request,  *args, **kwargs):
         pk = self.kwargs['pk']
         print(pk)

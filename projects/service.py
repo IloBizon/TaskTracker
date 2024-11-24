@@ -18,6 +18,23 @@ def get_all_project_roles(project: Project):
 
     return roles_serializer.data
 
+def get_project_role(project: Project, user: User):
+    print(user)
+    role = 3
+    if role:
+        return int(role)
+    else:
+        return 0
+
+def user_can_change_project(project: Project, user: User):
+    role = get_project_role(project, user)
+    is_staff = user.is_staff
+
+    if is_staff or role > 3:
+        return True
+    else:
+        return False
+
 
 def validate_user(user: User, project: Project) -> bool:
     from projects.serializers.common import ProjectSerializer
