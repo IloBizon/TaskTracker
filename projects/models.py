@@ -16,7 +16,22 @@ class Project(models.Model):
 
 
 class ProjectUser(models.Model):
+    ROLE_CHOICES = (
+        ("1", "Младший специалист"),
+        ("2", "Специалист"),
+        ("3", "Ведущий специалист"),
+        ("4", "Главный специалист"),
+        ("5", "Руководитель проекта")
+    )
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
-    role = models.CharField(max_length=100)
+    role = models.CharField(max_length=100, choices=ROLE_CHOICES)
 
+
+
+class ProjectHistory(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.DO_NOTHING, null=True)
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
+    date = models.DateTimeField(auto_now_add=True, null=True)
+    historical_record = models.CharField(max_length=100)

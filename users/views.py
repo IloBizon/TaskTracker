@@ -5,7 +5,9 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
 from .models import User
-from .serializers import UserSerializer
+from users.serializers.common import UserSerializer
+from .serializers.nested import UserPrettySerializer
+
 
 @extend_schema(tags=["Users"])
 @extend_schema_view(
@@ -49,3 +51,14 @@ class CreateUser(APIView):
         serializer = UserSerializer(instance=user)
 
         return Response(serializer.data)
+
+
+class GetUserProfile(APIView):
+    def get(self, request,  *args, **kwargs):
+        pk = self.kwargs['pk']
+        print(pk)
+        user = User.objects.get(id=pk)
+
+        return Response(UserPrettySerializer(instance=user).data)
+
+

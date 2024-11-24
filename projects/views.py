@@ -2,10 +2,10 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-
+from datetime import datetime
 from projects.serializers.nested import ProjectPrettySerializer
 from users.models import User
-from projects.models import Project, ProjectUser
+from projects.models import Project, ProjectUser, ProjectHistory
 from projects.serializers.common import ProjectUserSerializer
 from projects.service import get_all_project_roles, validate_user
 
@@ -55,6 +55,15 @@ class AddUser(APIView):
                 role = request.data['role']
             )
             project_user_serialized = ProjectUserSerializer(instance=project_user)
+
+            ProjectHistory.objects.create(
+                project=project,
+                user=user,
+                date=datetime.now(),
+                historical_record="Пользователь добавлен в проект"
+            )
+
+
             return Response(project_user_serialized.data)
         else:
             response = Response(data="User is already exists in this project!", status=403, exception=True)
@@ -64,16 +73,23 @@ class AddUser(APIView):
 
 @extend_schema(tags=["Projects"])
 @extend_schema_view(
-    delete=extend_schema(
+    put=extend_schema(
         summary="Удаление пользователя из проекта"
     )
 )
 class RemoveUser(APIView):
     serializer_class = ProjectUserSerializer
-    def delete(self, request):
-        project_user = ProjectUser.objects.filter(project=request.data['project'], user=request.data['user'])
+    def put(self, request):
+        project_user = ProjectUser.objects.filter(project=request.data['project'], user=request.data['user']).first()
         if not project_user:
             return Response("User does not exist in this project!")
+
+        ProjectHistory.objects.create(
+            project=project_user.project,
+            user=project_user.user,
+            date=datetime.now(),
+            historical_record="Пользователь удалён из проекта"
+        )
 
         project_user.delete()
         return Response("User is successfully removed!")

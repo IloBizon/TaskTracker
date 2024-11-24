@@ -9,4 +9,5 @@ urlpatterns = [
         'put': 'update',
         'patch': 'partial_update',
         'delete': 'destroy'})),
+    path("profile/<int:pk>", views.GetUserProfile.as_view())
 ]

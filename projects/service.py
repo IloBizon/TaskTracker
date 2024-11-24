@@ -1,7 +1,7 @@
 from projects.models import Project, ProjectUser
 from projects.serializers.nested import UserRoleSerializer
 from users.models import User
-from users.serializers import UserSerializer
+from users.serializers.common import UserSerializer
 
 
 
