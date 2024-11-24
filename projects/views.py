@@ -1,4 +1,4 @@
-
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -6,17 +6,45 @@ from rest_framework.viewsets import ModelViewSet
 from projects.serializers.nested import ProjectPrettySerializer
 from users.models import User
 from projects.models import Project, ProjectUser
-from projects.serializers.common import ProjectSerializer, ProjectUserSerializer
+from projects.serializers.common import ProjectUserSerializer
 from projects.service import get_all_project_roles, validate_user
-from rest_framework.exceptions import APIException
 
+@extend_schema(tags=["Projects"])
+@extend_schema_view(
+    list=extend_schema(
+        summary="Получить список проектов",
+        ),
+    retrieve=extend_schema(
+        summary="Получить проект по id"
+    ),
+    update=extend_schema(
+        summary="Изменение существующего проекта",
+        ),
+    partial_update=extend_schema(
+        summary="Частичное изменение проекта"
+        ),
+    create=extend_schema(
+            summary="Создание нового проекта",
+        ),
+    destroy =extend_schema(
+        summary='Удалить проект'
+    )
+)
 class ProjectView(ModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectPrettySerializer
 
+
+
+@extend_schema(tags=["Projects"])
+@extend_schema_view(
+    put=extend_schema(
+        summary="Добавить пользователя в проект"
+    )
+)
 class AddUser(APIView):
     serializer_class = ProjectUserSerializer
-    def post(self,request):
+    def put(self,request):
         project = Project.objects.get(id=request.data['project'])
         user = User.objects.get(id=request.data['user'])
 
@@ -33,9 +61,16 @@ class AddUser(APIView):
             return response
 
 
+
+@extend_schema(tags=["Projects"])
+@extend_schema_view(
+    delete=extend_schema(
+        summary="Удаление пользователя из проекта"
+    )
+)
 class RemoveUser(APIView):
     serializer_class = ProjectUserSerializer
-    def post(self, request):
+    def delete(self, request):
         project_user = ProjectUser.objects.filter(project=request.data['project'], user=request.data['user'])
         if not project_user:
             return Response("User does not exist in this project!")
@@ -43,9 +78,18 @@ class RemoveUser(APIView):
         project_user.delete()
         return Response("User is successfully removed!")
 
+
+
+
+@extend_schema(tags=["Projects"])
+@extend_schema_view(
+    patch=extend_schema(
+        summary="Изменить роль пользователя"
+    )
+)
 class ChangeRole(APIView):
     serializer_class = ProjectUserSerializer
-    def post(self, request):
+    def patch(self, request):
         project_user = ProjectUser.objects.filter(project=request.data['project'], user=request.data['user']).first()
         if not project_user:
             return Response("User does not exist in this project!")
@@ -56,6 +100,15 @@ class ChangeRole(APIView):
         return Response(serialized_project_user.data)
 
 
+
+
+
+@extend_schema(tags=["Projects"])
+@extend_schema_view(
+    get=extend_schema(
+        summary="Получить всех участников и их роли"
+    )
+)
 class GetAllRoles(APIView):
     def get(self, request, *args, **kwargs):
         pk = self.kwargs['pk']
