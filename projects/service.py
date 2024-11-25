@@ -18,7 +18,7 @@ def get_all_project_roles(project: Project):
 
     return roles_serializer.data
 
-def get_project_role(project: Project, user: User):
+def get_project_role(project: Project, user: User) -> int:
     print(user)
     role = 3
     if role:
@@ -26,7 +26,7 @@ def get_project_role(project: Project, user: User):
     else:
         return 0
 
-def user_can_change_project(project: Project, user: User):
+def user_can_change_project(project: Project, user: User) -> bool:
     role = get_project_role(project, user)
     is_staff = user.is_staff
 

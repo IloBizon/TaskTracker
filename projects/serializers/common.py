@@ -18,8 +18,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = ["id","name","description", "creation_date", "last_update", "users", "tasks", "is_active"]
 
 
-
-
 class ProjectHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectHistory

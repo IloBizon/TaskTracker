@@ -22,3 +22,6 @@ class Task(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True)
     due_date = models.DateTimeField(null=True)
     testing_responsible = models.ForeignKey("users.User", on_delete=models.SET_NULL, related_name="testing_responsible", null=True)
+    comments = models.ManyToManyField("comments.Comment", related_name="comments", blank=True)
+    comment_history = models.ManyToManyField("comments.CommentHistory", related_name="comment_history", blank=True)
+

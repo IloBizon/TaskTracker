@@ -31,6 +31,7 @@ class User(AbstractBaseUser):
     avatar = models.ImageField(null=False, blank=False, default="avatar_default.png", upload_to="user_avatars")
     projects = models.ManyToManyField("projects.Project", through="projects.ProjectUser")
     tasks = models.ManyToManyField(Task)
+    comments = models.ManyToManyField("comments.Comment")
     is_staff = models.BooleanField(default=False)
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name','last_name', 'password']
