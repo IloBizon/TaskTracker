@@ -1,6 +1,9 @@
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
 
+from tasks.models import Task
+
+
 class CustomUserManager(BaseUserManager):
     use_in_migrations = True
     def create_user(self, username, password, first_name, last_name, **kwargs):
@@ -27,6 +30,7 @@ class User(AbstractBaseUser):
     last_name = models.CharField(max_length=100)
     avatar = models.ImageField(null=False, blank=False, default="avatar_default.png", upload_to="user_avatars")
     projects = models.ManyToManyField("projects.Project", through="projects.ProjectUser")
+    tasks = models.ManyToManyField(Task)
     is_staff = models.BooleanField(default=False)
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name','last_name', 'password']

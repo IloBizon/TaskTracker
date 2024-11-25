@@ -1,5 +1,6 @@
 from django.db import models
 
+from tasks.models import Task
 from users.models import User
 
 
@@ -10,6 +11,7 @@ class Project(models.Model):
     last_update = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(auto_created=True, default=True)
     users = models.ManyToManyField(User, through='ProjectUser')
+    tasks = models.ManyToManyField(Task, related_name="project_tasks", blank=True)
 
     def __str__(self):
         return self.name

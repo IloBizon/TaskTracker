@@ -41,7 +41,7 @@ class ProjectPrettySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ["id", "name", "description", "creation_date", "last_update", "users", "is_active"]
+        fields = ["id", "name", "description", "creation_date", "last_update", "users","tasks", "is_active"]
 
 class ProjectHistoryPrettySerializer(serializers.ModelSerializer):
     project = serializers.CharField(source="project.name")

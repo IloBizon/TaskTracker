@@ -30,7 +30,7 @@ def user_can_change_project(project: Project, user: User):
     role = get_project_role(project, user)
     is_staff = user.is_staff
 
-    if is_staff or role > 3:
+    if is_staff or role >= 3:
         return True
     else:
         return False
