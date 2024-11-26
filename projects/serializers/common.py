@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
-from projects.models import Project, ProjectUser
-from projects.service import get_all_project_roles
+from projects.models import Project, ProjectUser, ProjectHistory
+from tasks.serializers.common import TaskSerializer
+
 
 class ProjectUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -11,7 +12,13 @@ class ProjectUserSerializer(serializers.ModelSerializer):
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-
+    tasks = TaskSerializer(many=True, required=False)
     class Meta:
         model = Project
-        fields = ["id","name","description", "creation_date", "last_update", "users", "is_active"]
+        fields = ["id","name","description", "creation_date", "last_update", "users", "tasks", "is_active"]
+
+
+class ProjectHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectHistory
+        fields = "__all__"
