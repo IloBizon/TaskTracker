@@ -3,10 +3,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.filters import OrderingFilter
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+from django_filters import rest_framework as filters
 from projects.models import Project
 from projects.serializers.common import ProjectSerializer
+from tasks.filters import TaskFilter
 from tasks.serializers.nested import UserTask
 from tasks.service import user_in_task, user_can_change_task
 from projects.service import user_can_change_project
@@ -42,6 +44,9 @@ class TaskView(ModelViewSet):
     serializer_class = TaskSerializer
     queryset = Task.objects.all()
 
+    filter_backends = (filters.DjangoFilterBackend, OrderingFilter)
+    filterset_class  = TaskFilter
+    ordering_fields = ("creation_date","name")
 
     def list(self, request, *args, **kwargs):
         if request.user.is_staff:
@@ -68,8 +73,8 @@ class TaskView(ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         task = Task.objects.get(id=self.kwargs["pk"])
         if request.data["project"] != task.project.id:
-            return Response(exception=True, status=401, data="You can not change task project!")
-        if user_in_task(task, request.user) or user_can_change_project(task.project, request.user):
+            return Response(exception=True, status=403, data="You can not change project!")
+        if user_in_task(task, request.user) or user_can_change_project(task.project, request.user) or request.user.is_staff:
             return super().partial_update(request, args, kwargs)
         else:
             return Response(exception=True, status=401, data="User can not update this task!")

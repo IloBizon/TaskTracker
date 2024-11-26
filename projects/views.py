@@ -4,9 +4,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from datetime import datetime
-
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+from rest_framework.filters import OrderingFilter
 from projects.serializers.nested import ProjectPrettySerializer, CreateProjectSerializer
 from users.models import User
 from projects.models import Project, ProjectUser, ProjectHistory
@@ -40,7 +39,8 @@ class ProjectView(ModelViewSet):
 
     serializer_class = ProjectPrettySerializer
     queryset = Project.objects.all()
-
+    filter_backends = [OrderingFilter]
+    ordering_fields = ['creation_date', 'last_update']
 
     def list(self, request, *args, **kwargs):
         if request.user.is_staff:
