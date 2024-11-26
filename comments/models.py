@@ -6,8 +6,8 @@ class Comment(models.Model):
     comment = models.CharField(max_length=500)
 
 class CommentHistory(models.Model):
-    comment_id = models.ForeignKey(Comment, on_delete=models.DO_NOTHING)
-    author = models.ForeignKey("users.User", related_name="history_author", on_delete=models.DO_NOTHING, null=True)
+    comment_id = models.ForeignKey(Comment, on_delete=models.SET_NULL, null=True)
+    author = models.ForeignKey("users.User", related_name="history_author", on_delete=models.CASCADE, null=True)
     date = models.DateTimeField(auto_now_add=True, null=True)
     comment = models.CharField(max_length=500, null=True)
     historical_record = models.CharField(max_length=100)

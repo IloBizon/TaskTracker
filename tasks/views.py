@@ -39,9 +39,9 @@ from users.models import User
 class TaskView(ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-
-    queryset = Task.objects.all()
     serializer_class = TaskSerializer
+    queryset = Task.objects.all()
+
 
     def list(self, request, *args, **kwargs):
         if request.user.is_staff:
@@ -67,7 +67,8 @@ class TaskView(ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         task = Task.objects.get(id=self.kwargs["pk"])
-
+        if request.data["project"] != task.project.id:
+            return Response(exception=True, status=401, data="You can not change task project!")
         if user_in_task(task, request.user) or user_can_change_project(task.project, request.user):
             return super().partial_update(request, args, kwargs)
         else:
@@ -81,9 +82,10 @@ class TaskView(ModelViewSet):
             task = super().create(request, *args, **kwargs)
 
             project.tasks.add(task.data["id"])
-            users = User.objects.filter(id__in = request.data["users"])
-            for user in users:
-                user.tasks.add(task.data["id"])
+            if "users" in request.data:
+               users = User.objects.filter(id__in=request.data["users"])
+               for user in users:
+                   user.tasks.add(task.data["id"])
 
             return task
         else:
@@ -95,7 +97,7 @@ class TaskView(ModelViewSet):
         if user_in_task(task, request.user) or user_can_change_project(task.project, request.user):
             for user in serialized_task.data["users"]:
                 user.tasks.remove(task)
-            project = Project.objects.get(id=task.project)
+            project = Project.objects.get(id=task.project.id)
             project.tasks.remove(task)
             return super().destroy(request, args, kwargs)
         else:
@@ -146,6 +148,8 @@ class AddUserToTask(APIView):
         else:
             return Response(exception=True, status=403, data="User is not in project!")
 
+
+
 @extend_schema(tags=["Tasks"])
 @extend_schema_view(
     patch=extend_schema(
@@ -161,8 +165,13 @@ class RemoveUserFromTask(APIView):
         project = task.project
         serialized_project = ProjectSerializer(instance=project)
         user = User.objects.get(id=request.data["user"])
-        if request.data["user"] in serialized_project.data["users"] and user_can_change_task(task, request.user) and user_in_task(task, user):
-            task.users.remove(request.data["user"])
+        if not user_in_task(task, user):
+            return Response(exception=True, status=403, data="User is not in task!")
+
+        if request.data["user"] in serialized_project.data["users"] and user_can_change_task(task, request.user):
+
+
+            task.users.remove(user)
             user.tasks.remove(task)
             serialized_task = TaskSerializer(instance=task)
             return Response(serialized_task.data)

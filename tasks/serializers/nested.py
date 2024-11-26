@@ -11,3 +11,7 @@ class UserTask(serializers.ModelSerializer):
         model = Task
         fields = ["user", "task"]
 
+class CreateTaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ["name", "description", "project", "status", "priority", "due_date", "testing_responsible"]

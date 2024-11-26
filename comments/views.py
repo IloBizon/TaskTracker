@@ -50,7 +50,7 @@ class CommentView(ModelViewSet):
             comment_model = Comment.objects.get(id=comment.data["id"])
             history = CommentHistory.objects.create(
                 comment_id=comment_model,
-                comment_text=comment.data["comment"],
+                comment=comment.data["comment"],
                 author = comment_model.author,
                 date=datetime.now(),
                 historical_record="Написан комментарий"
@@ -65,9 +65,9 @@ class CommentView(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         comment = Comment.objects.get(id=self.kwargs["pk"])
-        if comment.author == request.user.id or request.user.is_staff:
-            comment.task.comments.remove(comment.data["id"])
-            request.user.comments.remove(comment.data["id"])
+        if comment.author.id == request.user.id or request.user.is_staff:
+            comment.task.comments.remove(comment.id)
+            request.user.comments.remove(comment.id)
 
             history = CommentHistory.objects.create(
                 comment_id=comment,
@@ -76,8 +76,7 @@ class CommentView(ModelViewSet):
                 date=datetime.now(),
                 historical_record="Комментарий удалён"
             )
-            comment.task.comments.add(history)
-
+            comment.task.comment_history.add(history)
             return super().destroy(request, *args, **kwargs)
         else:
             return Response(exception=True, status=401, data="User can not delete this comment!")
@@ -96,7 +95,7 @@ class UpdateComment(APIView):
     permission_classes = [IsAuthenticated]
     def patch(self, request):
         comment = Comment.objects.get(id=request.data["comment_id"])
-        if comment.author == request.user.id or request.user.is_staff:
+        if comment.author.id == request.user.id or request.user.is_staff:
             comment.comment = request.data["comment"]
 
             history = CommentHistory.objects.create(
@@ -110,7 +109,6 @@ class UpdateComment(APIView):
             comment.save()
             serialized_comment = CommentSerializer(instance=comment)
             return Response(serialized_comment.data)
-
 
 
 

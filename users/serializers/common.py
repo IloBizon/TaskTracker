@@ -5,7 +5,7 @@ class UserSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(use_url=True)
     class Meta:
         model = User
-        fields = ["id","username", "password", "avatar", "first_name", "last_name", "projects","tasks", "is_active", "is_staff"]
+        fields = ["id","username", "avatar", "first_name", "last_name", "projects","tasks","comments","is_active", "is_staff"]
 
 class UserLoginSerializer(serializers.ModelSerializer):
     class Meta:

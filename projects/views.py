@@ -7,11 +7,11 @@ from datetime import datetime
 
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from projects.serializers.nested import ProjectPrettySerializer
+from projects.serializers.nested import ProjectPrettySerializer, CreateProjectSerializer
 from users.models import User
 from projects.models import Project, ProjectUser, ProjectHistory
-from projects.serializers.common import ProjectUserSerializer
-from projects.service import get_all_project_roles, validate_user, user_can_change_project, get_project_role
+from projects.serializers.common import ProjectUserSerializer, ProjectSerializer
+from projects.service import get_all_project_roles, validate_user, user_can_change_project, add_user_to_project, get_project_role
 
 @extend_schema(tags=["Projects"])
 @extend_schema_view(
@@ -38,8 +38,9 @@ class ProjectView(ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    queryset = Project.objects.all()
     serializer_class = ProjectPrettySerializer
+    queryset = Project.objects.all()
+
 
     def list(self, request, *args, **kwargs):
         if request.user.is_staff:
@@ -51,6 +52,7 @@ class ProjectView(ModelViewSet):
         pk = self.kwargs['pk']
         project = Project.objects.get(id=pk)
         if user_can_change_project(project, request.user):
+            request.data["last_update"] = datetime.now()
             return super().update(request, *args, *kwargs)
         else:
             return Response(exception=True, status=401, data="User can not change this project!")
@@ -60,10 +62,32 @@ class ProjectView(ModelViewSet):
         pk = self.kwargs['pk']
         project = Project.objects.get(id=pk)
         if user_can_change_project(project, request.user):
+            request.data["last_update"] = datetime.now()
             return super().partial_update(request, *args, *kwargs)
         else:
             return Response(exception=True, status=401, data="User can not change this project!")
 
+    def create(self, request, *args, **kwargs):
+
+        project = super().create(request, *args, **kwargs)
+        project_model = Project.objects.get(id=project.data["id"])
+        add_user_to_project(request.user, project_model, "5")
+        serialized_project = ProjectPrettySerializer(instance=project_model)
+        return Response(serialized_project.data)
+
+    def destroy(self, request, *args, **kwargs):
+        project = Project.objects.filter(id=self.kwargs["pk"]).first()
+        if not project:
+            return Response(status=204)
+
+        if get_project_role(project, request.user) == 5 or request.user.is_staff:
+            # project.is_active = False
+            # project.save()
+            # serialized_project = ProjectSerializer(instance=project)
+            # users = User.objects.filter(id__in=serialized_project.data["users"])
+            return super().destroy(request, *args, **kwargs)
+        else:
+            return Response(exception=True, status=401, data="User can not delete this project!")
 
 
 
@@ -86,22 +110,9 @@ class AddUser(APIView):
             return Response(exception=True, status=401, data="User can not change this project!")
 
         if validate_user(user, project):
-            project_user = ProjectUser.objects.create(
-                project = project,
-                user = user,
-                role = request.data['role']
-            )
-            project_user_serialized = ProjectUserSerializer(instance=project_user)
+            project_user = add_user_to_project(user, project, request.data["role"])
 
-            ProjectHistory.objects.create(
-                project=project,
-                user=user,
-                date=datetime.now(),
-                historical_record="Пользователь добавлен в проект"
-            )
-
-
-            return Response(project_user_serialized.data)
+            return Response(project_user)
         else:
             response = Response(data="User is already exists in this project!", status=403, exception=True)
             return response
@@ -134,6 +145,10 @@ class RemoveUser(APIView):
         )
 
         project_user.delete()
+        project = Project.objects.get(id=project_user.project)
+        project_user.last_update = datetime.now()
+        project.last_update = datetime.now()
+        project.save()
         return Response("User is successfully removed!")
 
 
@@ -175,6 +190,7 @@ class ChangeRole(APIView):
 class GetAllRoles(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    serializer_class = None
     def get(self, request, *args, **kwargs):
         pk = self.kwargs['pk']
         project = Project.objects.get(id=pk)

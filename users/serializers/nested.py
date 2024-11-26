@@ -20,3 +20,9 @@ class UserPrettySerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "first_name", "last_name", "avatar", "projects", "project_history"]
+
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["username", "password", "avatar", "first_name", "last_name"]

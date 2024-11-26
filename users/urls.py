@@ -8,7 +8,8 @@ urlpatterns = [
     path('<int:pk>', views.UserViewSet.as_view({
         'get': 'retrieve',
         'put': 'update',
-        'patch': 'partial_update',})),
+        'patch': 'partial_update',
+        'delete':'destroy'})),
     path("profile/<int:pk>", views.GetUserProfile.as_view()),
 
 ]

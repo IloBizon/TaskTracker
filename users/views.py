@@ -8,7 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 from users.serializers.common import UserSerializer, UserLoginSerializer
-from .serializers.nested import UserPrettySerializer
+from .serializers.nested import UserPrettySerializer, UserRegisterSerializer
 
 
 @extend_schema(tags=["Users"])
@@ -55,8 +55,11 @@ class UserViewSet(ModelViewSet):
             return Response(exception=True, status=401, data="User is not an admin!")
 
     def destroy(self, request, *args, **kwargs):
-        if request.user.is_staff:
-            return super().destroy(request, *args, *kwargs)
+        user = User.objects.get(id=self.kwargs["pk"])
+        if request.user.is_staff or request.user.id == self.kwargs["pk"]:
+            user.is_active = False
+            user.save()
+            return Response(status=204)
         else:
             return Response(exception=True, status=401, data="User is not an admin!")
 
@@ -69,7 +72,7 @@ class UserViewSet(ModelViewSet):
     )
 )
 class RegisterUser(APIView):
-    serializer_class = UserSerializer
+    serializer_class = UserRegisterSerializer
     def post(self,request: Request):
 
         if request.data['avatar']:
@@ -78,7 +81,6 @@ class RegisterUser(APIView):
             user = User.objects.create_user(request.data['username'], request.data['password'], request.data['first_name'], request.data['last_name'])
 
         token = RefreshToken.for_user(user)
-        serializer = UserSerializer(instance=user)
 
         return Response({
         'refresh': str(token),
@@ -97,7 +99,8 @@ class UserLogin(APIView):
     serializer_class=UserLoginSerializer
     def post(self, request):
 
-        user = User.objects.get(username=request.data["username"])
+        user = User.objects.filter(username=request.data["username"]).first()
+
         if not user or not user.check_password(request.data["password"]):
             return Response(exception=True, status=401, data="Username or password is incorrect")
 
@@ -124,7 +127,6 @@ class GetUserProfile(APIView):
 
     def get(self, request,  *args, **kwargs):
         pk = self.kwargs['pk']
-        print(pk)
         user = User.objects.get(id=pk)
 
         return Response(UserPrettySerializer(instance=user).data)

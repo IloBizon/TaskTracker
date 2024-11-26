@@ -1,7 +1,6 @@
 from django.db import models
 
 from tasks.models import Task
-from users.models import User
 
 
 class Project(models.Model):
@@ -10,7 +9,7 @@ class Project(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True)
     last_update = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(auto_created=True, default=True)
-    users = models.ManyToManyField(User, through='ProjectUser')
+    users = models.ManyToManyField("users.User", through='ProjectUser')
     tasks = models.ManyToManyField(Task, related_name="project_tasks", blank=True)
 
     def __str__(self):
@@ -27,13 +26,13 @@ class ProjectUser(models.Model):
     )
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, null=True)
     role = models.CharField(max_length=100, choices=ROLE_CHOICES)
 
 
 
 class ProjectHistory(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.DO_NOTHING, null=True)
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
+    project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, blank=True)
     date = models.DateTimeField(auto_now_add=True, null=True)
     historical_record = models.CharField(max_length=100)
