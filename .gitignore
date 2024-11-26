@@ -76,7 +76,8 @@ docs/_build/
 
 # PyBuilder
 target/
-
+.venv
+.idea
 
 ### Django ###
 *.log
