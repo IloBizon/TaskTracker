@@ -1,41 +1,47 @@
+from datetime import datetime
+
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import status
+from rest_framework.filters import OrderingFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from datetime import datetime
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.filters import OrderingFilter
-from projects.serializers.nested import ProjectPrettySerializer, CreateProjectSerializer
-from users.models import User
+
 from projects.models import Project, ProjectUser, ProjectHistory
-from projects.serializers.common import ProjectUserSerializer, ProjectSerializer
-from projects.service import get_all_project_roles, validate_user, user_can_change_project, add_user_to_project, get_project_role
+from projects.permissions import CanChangeProjectOrStaff
+from projects.serializers.common import ProjectUserSerializer
+from projects.serializers.nested import ProjectPrettySerializer
+from projects.service import get_all_project_roles, validate_user, add_user_to_project, \
+    get_project_role
+from users.models import User
+
 
 @extend_schema(tags=["Projects"])
 @extend_schema_view(
     list=extend_schema(
         summary="Получить список проектов",
-        ),
+    ),
     retrieve=extend_schema(
         summary="Получить проект по id"
     ),
     update=extend_schema(
         summary="Изменение существующего проекта",
-        ),
+    ),
     partial_update=extend_schema(
         summary="Частичное изменение проекта"
-        ),
+    ),
     create=extend_schema(
-            summary="Создание нового проекта",
-        ),
-    destroy =extend_schema(
+        summary="Создание нового проекта",
+    ),
+    destroy=extend_schema(
         summary='Удалить проект'
     )
 )
 class ProjectView(ModelViewSet):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanChangeProjectOrStaff]
 
     serializer_class = ProjectPrettySerializer
     queryset = Project.objects.all()
@@ -46,26 +52,21 @@ class ProjectView(ModelViewSet):
         if request.user.is_staff:
             return super().list(request, *args, *kwargs)
         else:
-            return Response(exception=True, status=401, data="User is not an admin!")
+            self.permission_denied(request)
 
     def update(self, request, *args, **kwargs):
         pk = self.kwargs['pk']
         project = Project.objects.get(id=pk)
-        if user_can_change_project(project, request.user):
-            request.data["last_update"] = datetime.now()
-            return super().update(request, *args, *kwargs)
-        else:
-            return Response(exception=True, status=401, data="User can not change this project!")
-
+        self.check_object_permissions(request, project)
+        request.data["last_update"] = datetime.now()
+        return super().update(request, *args, *kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         pk = self.kwargs['pk']
         project = Project.objects.get(id=pk)
-        if user_can_change_project(project, request.user):
-            request.data["last_update"] = datetime.now()
-            return super().partial_update(request, *args, *kwargs)
-        else:
-            return Response(exception=True, status=401, data="User can not change this project!")
+        self.check_object_permissions(request, project)
+        request.data["last_update"] = datetime.now()
+        return super().partial_update(request, *args, *kwargs)
 
     def create(self, request, *args, **kwargs):
 
@@ -81,15 +82,9 @@ class ProjectView(ModelViewSet):
             return Response(status=204)
 
         if get_project_role(project, request.user) == 5 or request.user.is_staff:
-            # project.is_active = False
-            # project.save()
-            # serialized_project = ProjectSerializer(instance=project)
-            # users = User.objects.filter(id__in=serialized_project.data["users"])
             return super().destroy(request, *args, **kwargs)
         else:
-            return Response(exception=True, status=401, data="User can not delete this project!")
-
-
+            self.permission_denied(request)
 
 
 @extend_schema(tags=["Projects"])
@@ -100,23 +95,22 @@ class ProjectView(ModelViewSet):
 )
 class AddUser(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanChangeProjectOrStaff]
     serializer_class = ProjectUserSerializer
-    def put(self,request):
-        project = Project.objects.get(id=request.data['project'])
-        user = User.objects.get(id=request.data['user'])
 
-        if not user_can_change_project(project, request.user):
-            return Response(exception=True, status=401, data="User can not change this project!")
+    def put(self, request):
+        project = Project.objects.get(id=request.data['project'])
+        self.check_object_permissions(request, project)
+
+        user = User.objects.get(id=request.data['user'])
 
         if validate_user(user, project):
             project_user = add_user_to_project(user, project, request.data["role"])
 
             return Response(project_user)
         else:
-            response = Response(data="User is already exists in this project!", status=403, exception=True)
-            return response
-
+            return Response(data="User is already exists in this project!", status=status.HTTP_400_BAD_REQUEST,
+                            exception=True)
 
 
 @extend_schema(tags=["Projects"])
@@ -128,14 +122,14 @@ class AddUser(APIView):
 class RemoveUser(APIView):
     serializer_class = ProjectUserSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanChangeProjectOrStaff]
+
     def put(self, request):
         project_user = ProjectUser.objects.filter(project=request.data['project'], user=request.data['user']).first()
-        if not user_can_change_project(project_user.project, request.user):
-            return Response(exception=True, status=401, data="User can not change this project!")
+        self.check_object_permissions(request, project_user.project)
 
         if not project_user:
-            return Response("User does not exist in this project!")
+            return Response("User does not exist in this project!", status=status.HTTP_400_BAD_REQUEST, exception=True)
 
         ProjectHistory.objects.create(
             project=project_user.project,
@@ -149,9 +143,7 @@ class RemoveUser(APIView):
         project_user.last_update = datetime.now()
         project.last_update = datetime.now()
         project.save()
-        return Response("User is successfully removed!")
-
-
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @extend_schema(tags=["Projects"])
@@ -163,22 +155,20 @@ class RemoveUser(APIView):
 class ChangeRole(APIView):
     serializer_class = ProjectUserSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanChangeProjectOrStaff]
+
     def patch(self, request):
         project_user = ProjectUser.objects.filter(project=request.data['project'], user=request.data['user']).first()
-        if not user_can_change_project(project_user.project, request.user):
-            return Response(exception=True, status=401, data="User can not change this project!")
+        self.check_object_permissions(request, project_user.project)
 
         if not project_user:
-            return Response("User does not exist in this project!")
+            return Response("User does not exist in this project!", status=status.HTTP_400_BAD_REQUEST, exception=True)
+
         project_user.role = request.data['role']
         project_user.save()
         serialized_project_user = ProjectUserSerializer(instance=project_user)
 
         return Response(serialized_project_user.data)
-
-
-
 
 
 @extend_schema(tags=["Projects"])
@@ -191,14 +181,10 @@ class GetAllRoles(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = None
+
     def get(self, request, *args, **kwargs):
         pk = self.kwargs['pk']
         project = Project.objects.get(id=pk)
         roles = get_all_project_roles(project)
 
         return Response(roles)
-
-
-
-
-

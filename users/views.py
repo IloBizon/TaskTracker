@@ -3,12 +3,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 from users.serializers.common import UserSerializer, UserLoginSerializer
 from .serializers.nested import UserPrettySerializer, UserRegisterSerializer
+from users.service import staff_only
 
 
 @extend_schema(tags=["Users"])
@@ -36,32 +38,26 @@ class UserViewSet(ModelViewSet):
     serializer_class = UserSerializer
     queryset = User.objects.all()
 
+    @staff_only
     def list(self, request, *args, **kwargs):
-        if request.user.is_staff:
-            return super().list(request, *args, *kwargs)
-        else:
-            return Response(exception=True, status=401, data="User is not an admin!")
+        return super().list(request, *args, *kwargs)
 
+    @staff_only
     def update(self, request, *args, **kwargs):
-        if request.user.is_staff:
-            return super().update(request, *args, *kwargs)
-        else:
-            return Response(exception=True, status=401, data="User is not an admin!")
+        return super().update(request, *args, *kwargs)
 
+    @staff_only
     def partial_update(self, request, *args, **kwargs):
-        if request.user.is_staff:
-            return super().partial_update(request, *args, *kwargs)
-        else:
-            return Response(exception=True, status=401, data="User is not an admin!")
+        return super().partial_update(request, *args, *kwargs)
 
     def destroy(self, request, *args, **kwargs):
         user = User.objects.get(id=self.kwargs["pk"])
         if request.user.is_staff or request.user.id == self.kwargs["pk"]:
             user.is_active = False
             user.save()
-            return Response(status=204)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         else:
-            return Response(exception=True, status=401, data="User is not an admin!")
+            self.permission_denied(request)
 
 
 
@@ -102,7 +98,7 @@ class UserLogin(APIView):
         user = User.objects.filter(username=request.data["username"]).first()
 
         if not user or not user.check_password(request.data["password"]):
-            return Response(exception=True, status=401, data="Username or password is incorrect")
+            self.permission_denied(request, message="Username or password is incorrect", code=status.HTTP_401_UNAUTHORIZED)
 
         refresh = RefreshToken.for_user(user)
 
