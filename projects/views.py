@@ -58,14 +58,12 @@ class ProjectView(ModelViewSet):
         pk = self.kwargs['pk']
         project = Project.objects.get(id=pk)
         self.check_object_permissions(request, project)
-        request.data["last_update"] = datetime.now()
         return super().update(request, *args, *kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         pk = self.kwargs['pk']
         project = Project.objects.get(id=pk)
         self.check_object_permissions(request, project)
-        request.data["last_update"] = datetime.now()
         return super().partial_update(request, *args, *kwargs)
 
     def create(self, request, *args, **kwargs):
