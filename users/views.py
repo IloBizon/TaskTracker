@@ -70,7 +70,6 @@ class UserViewSet(ModelViewSet):
 class RegisterUser(APIView):
     serializer_class = UserRegisterSerializer
     def post(self,request: Request):
-
         if request.data['avatar']:
             user = User.objects.create_user(request.data['username'],request.data['password'],request.data['first_name'],request.data['last_name'], avatar=request.data['avatar'])
         else:
