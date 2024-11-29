@@ -27,5 +27,12 @@ def get_project_history(user: User):
 
     return history.data
 
+def staff_only(func):
+    def wrapper(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            func(self, request ,*args, **kwargs)
+        else:
+            self.permission_denied(request)
+    return wrapper
 
 

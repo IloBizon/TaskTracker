@@ -7,7 +7,7 @@ class Project(models.Model):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=500)
     creation_date = models.DateTimeField(auto_now_add=True)
-    last_update = models.DateTimeField(auto_now_add=True)
+    last_update = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(auto_created=True, default=True)
     users = models.ManyToManyField("users.User", through='ProjectUser')
     tasks = models.ManyToManyField(Task, related_name="project_tasks", blank=True)

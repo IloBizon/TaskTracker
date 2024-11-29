@@ -6,5 +6,5 @@ urlpatterns= [
     path('<int:pk>', views.CommentView.as_view({
         'get': 'retrieve',
         'delete': 'destroy'})),
-    path("update", views.UpdateComment.as_view())
+    path("<int:pk>/update", views.UpdateComment.as_view())
 ]
